@@ -190,6 +190,14 @@ input[type=file]{display:none}
 .bnav-item.active{color:var(--accent)}
 .bnav-icon{font-size:18px}.bnav-lbl{font-size:9px;font-weight:700}
 
+/* FILTER BULAN TAHUN */
+.dash-filter{display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;box-shadow:var(--card-shadow)}
+.dash-filter label{font-size:11px;font-weight:700;color:var(--text3);white-space:nowrap}
+.dash-filter select{flex:1;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 10px;color:var(--text);font-size:12px;font-family:inherit;outline:none;-webkit-appearance:none}
+.dash-filter select:focus{border-color:var(--accent)}
+.dash-filter-lbl{font-size:10px;color:var(--text2);display:flex;align-items:center;gap:5px}
+.filter-badge{display:inline-block;background:rgba(124,111,255,.15);color:var(--accent);border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700;border:1px solid rgba(124,111,255,.25)}
+
 /* LAINNYA POPUP GRID */
 .lainnya-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .lainnya-item{display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 8px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-family:inherit;color:var(--text);transition:.2s}
@@ -371,18 +379,20 @@ input[type=file]{display:none}
 <!-- ══ TABUNGAN ═══════════════════════════ -->
 <div class="section" id="sec-tabungan">
   <div class="card">
-    <div class="card-title">🏦 Catat Tabungan</div>
-    <div class="frow">
-      <div class="fg"><label>Nama Tujuan</label><input type="text" class="fi" id="namaTab" placeholder="Dana Darurat..."></div>
-      <div class="fg"><label>Rekening Sumber</label><select class="fs" id="rTab"><option value="">Pilih...</option></select></div>
+    <div class="sec-hdr">
+      <span class="sec-ttl">🏦 Tambah Setoran</span>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('mTabunganBaru')">+ Tabungan Baru</button>
     </div>
+    <div class="fg"><label>Pilih Tabungan</label>
+      <select class="fs" id="tabSel"><option value="">Pilih tabungan...</option></select></div>
+    <div class="fg"><label>Rekening Sumber</label>
+      <select class="fs" id="rTab"><option value="">Pilih...</option></select></div>
     <div class="frow">
-      <div class="fg"><label>Target Total (Rp)</label><input type="number" class="fi" id="targetTab" placeholder="10000000"></div>
-      <div class="fg"><label>Ditabung Sekarang</label><input type="number" class="fi" id="jmlTab" placeholder="500000"></div>
+      <div class="fg"><label>Tanggal</label><input type="date" class="fi" id="tglTab"></div>
+      <div class="fg"><label>Jumlah Setoran (Rp)</label><input type="number" class="fi" id="jmlTab" placeholder="500000"></div>
     </div>
-    <div class="fg"><label>Tanggal</label><input type="date" class="fi" id="tglTab"></div>
     <div class="fg"><label>Catatan</label><textarea class="fta" id="catTab" style="min-height:54px"></textarea></div>
-    <button class="btn btn-green" id="btnTab" onclick="simpanTabungan()">🏦 Simpan Tabungan</button>
+    <button class="btn btn-green" id="btnTab" onclick="simpanTabungan()">🏦 Simpan Setoran</button>
   </div>
   <div class="card">
     <div class="card-title">📊 Progress Tabungan</div>
@@ -403,11 +413,24 @@ input[type=file]{display:none}
 
 <!-- ══ DASHBOARD ══════════════════════════ -->
 <div class="section" id="sec-dashboard">
+  <!-- Filter Bulan & Tahun -->
+  <div class="dash-filter">
+    <label>📅</label>
+    <select id="filterBulan" onchange="renderDashboard()">
+      <option value="0">Januari</option><option value="1">Februari</option>
+      <option value="2">Maret</option><option value="3">April</option>
+      <option value="4">Mei</option><option value="5">Juni</option>
+      <option value="6">Juli</option><option value="7">Agustus</option>
+      <option value="8">September</option><option value="9">Oktober</option>
+      <option value="10">November</option><option value="11">Desember</option>
+    </select>
+    <select id="filterTahun" onchange="renderDashboard()" style="max-width:90px"></select>
+  </div>
   <div class="dash-grid">
     <div class="dash-stat"><div class="dsl">Total Saldo</div><div class="dsv g" id="dTotalSaldo">-</div></div>
     <div class="dash-stat"><div class="dsl">Aset Logam</div><div class="dsv go" id="dTotalAset">-</div></div>
-    <div class="dash-stat"><div class="dsl">Keluar Bulan Ini</div><div class="dsv r" id="dKeluar">-</div></div>
-    <div class="dash-stat"><div class="dsl">Masuk Bulan Ini</div><div class="dsv g" id="dMasuk">-</div></div>
+    <div class="dash-stat"><div class="dsl" id="lblKeluar">Keluar Bulan Ini</div><div class="dsv r" id="dKeluar">-</div></div>
+    <div class="dash-stat"><div class="dsl" id="lblMasuk">Masuk Bulan Ini</div><div class="dsv g" id="dMasuk">-</div></div>
   </div>
   <div class="card">
     <div class="card-title">📊 Pengeluaran per Kategori</div>
@@ -599,6 +622,50 @@ input[type=file]{display:none}
   </div>
 </div>
 
+<!-- ══ MODAL: TABUNGAN BARU ══ -->
+<div class="overlay" id="mTabunganBaru">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mTabTitle">🏦 Buat Tabungan Baru</div>
+    <input type="hidden" id="editTabNama">
+    <div class="fg"><label>Nama Tabungan / Tujuan</label>
+      <input type="text" class="fi" id="namaTabBaru" placeholder="Dana Darurat, Deposito Seabank, Beli Rumah..."></div>
+    <div class="fg"><label>Target Total (Rp)</label>
+      <input type="number" class="fi" id="targetTabBaru" placeholder="500000000"></div>
+    <div class="fg" id="fgTabRek">
+      <label>Rekening Sumber Pertama (opsional)</label>
+      <select class="fs" id="rTabBaru"><option value="">Tidak ada setoran awal</option></select></div>
+    <div class="fg" id="fgTabJml">
+      <label>Setoran Awal (Rp)</label>
+      <input type="number" class="fi" id="jmlTabBaru" placeholder="0"></div>
+    <div class="fg"><label>Catatan</label>
+      <textarea class="fta" id="catTabBaru" style="min-height:48px" placeholder="Deposito 6 bulan, dll..."></textarea></div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-green" id="btnTabBaru" onclick="simpanTabunganBaru()">✅ Buat Tabungan</button>
+      <button class="btn btn-ghost" onclick="closeModal('mTabunganBaru')">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: EDIT TABUNGAN ══ -->
+<div class="overlay" id="mEditTabungan">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Edit Target Tabungan</div>
+    <input type="hidden" id="editTabId">
+    <div class="fg"><label>Nama Tabungan</label>
+      <input type="text" class="fi" id="editTabNamaVal" readonly style="opacity:.6"></div>
+    <div class="fg"><label>Target Baru (Rp)</label>
+      <input type="number" class="fi" id="editTabTarget" placeholder="500000000"></div>
+    <div class="fg"><label>Catatan</label>
+      <textarea class="fta" id="editTabCat" style="min-height:48px"></textarea></div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-primary" id="btnEditTab" onclick="simpanEditTabungan()">💾 Simpan</button>
+      <button class="btn btn-ghost" onclick="closeModal('mEditTabungan')">Batal</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL: KONFIRMASI HAPUS ══ -->
 <div class="overlay" id="mHapus">
   <div class="modal">
@@ -723,7 +790,12 @@ async function api(data){
 
 async function fetchDashboard(){
   try{
-    const d=await api({action:'getDashboard'});
+    // Ambil dashboard + semua transaksi sekaligus (parallel)
+    const [d, all] = await Promise.all([
+      api({action:'getDashboard'}),
+      api({action:'getAll'})
+    ]);
+    d.harianAll = all.harian || [];
     S.dashData=d; S.rekening=d.saldoPerRekening||[];
     renderRekeningScroll();
     populateRekSelects();
@@ -1149,42 +1221,136 @@ function hapusRencItem(id,nama){
 }
 
 // ══ TABUNGAN ═════════════════════════════════════════════
+// Buat tabungan baru (set nama + target, opsional setoran awal)
+async function simpanTabunganBaru(){
+  const nama=document.getElementById('namaTabBaru').value.trim();
+  const target=parseFloat(document.getElementById('targetTabBaru').value)||0;
+  if(!nama){toast('Isi nama tabungan!','err');return;}
+  if(!target){toast('Isi target!','err');return;}
+  const idR=document.getElementById('rTabBaru').value;
+  const jml=parseFloat(document.getElementById('jmlTabBaru').value)||0;
+  const rek=S.rekening.find(r=>r.id===idR);
+  setLoad('btnTabBaru',true);
+  try{
+    await api({action:'tambahTabungan',
+      namaTabungan:nama, idRekening:idR||'',
+      namaRekening:rek?.nama||'',
+      target:target,
+      jumlah:jml,  // bisa 0 jika tidak ada setoran awal
+      tanggal:new Date().toISOString().split('T')[0],
+      catatan:document.getElementById('catTabBaru').value});
+    toast('✅ Tabungan dibuat!','ok');
+    closeModal('mTabunganBaru');
+    ['namaTabBaru','targetTabBaru','jmlTabBaru','catTabBaru'].forEach(id=>document.getElementById(id).value='');
+    await fetchDashboard(); renderTabungan();
+  }catch(err){toast(err.message,'err');}
+  finally{setLoad('btnTabBaru',false);}
+}
+
+// Tambah setoran ke tabungan yang sudah ada
 async function simpanTabungan(){
-  const nama=document.getElementById('namaTab').value.trim();
+  const nama=document.getElementById('tabSel').value;
   const jml=document.getElementById('jmlTab').value;
   const idR=document.getElementById('rTab').value;
-  if(!nama){toast('Isi nama tabungan!','err');return;}
-  if(!jml||parseFloat(jml)<=0){toast('Isi jumlah!','err');return;}
+  if(!nama){toast('Pilih tabungan!','err');return;}
+  if(!jml||parseFloat(jml)<=0){toast('Isi jumlah setoran!','err');return;}
   const rek=S.rekening.find(r=>r.id===idR);
+  // Ambil target dari data yang ada
+  const tabData=S.dashData?.tabunganMap?.[nama];
   setLoad('btnTab',true);
   try{
-    await api({action:'tambahTabungan',namaTabungan:nama,idRekening:idR||'',
-      namaRekening:rek?.nama||'',target:parseFloat(document.getElementById('targetTab').value)||0,
-      jumlah:parseFloat(jml),tanggal:document.getElementById('tglTab').value,
+    await api({action:'tambahTabungan',
+      namaTabungan:nama, idRekening:idR||'',
+      namaRekening:rek?.nama||'',
+      target:tabData?.target||0,
+      jumlah:parseFloat(jml),
+      tanggal:document.getElementById('tglTab').value,
       catatan:document.getElementById('catTab').value});
-    toast('🏦 Tabungan tersimpan!','ok');
+    toast('🏦 Setoran tersimpan!','ok');
     document.getElementById('jmlTab').value=''; document.getElementById('catTab').value='';
     await fetchDashboard(); renderTabungan();
   }catch(err){toast(err.message,'err');}
   finally{setLoad('btnTab',false);}
 }
 
+function openEditTabungan(nama,target,catatan){
+  document.getElementById('editTabNamaVal').value=nama;
+  document.getElementById('editTabTarget').value=target;
+  document.getElementById('editTabCat').value=catatan||'';
+  openModal('mEditTabungan');
+}
+
+async function simpanEditTabungan(){
+  const nama=document.getElementById('editTabNamaVal').value;
+  const target=parseFloat(document.getElementById('editTabTarget').value)||0;
+  if(!target){toast('Isi target!','err');return;}
+  setLoad('btnEditTab',true);
+  try{
+    await api({action:'editTargetTabungan',namaTabungan:nama,target});
+    toast('✅ Target diupdate!','ok');
+    closeModal('mEditTabungan');
+    await fetchDashboard(); renderTabungan();
+  }catch(err){toast(err.message,'err');}
+  finally{setLoad('btnEditTab',false);}
+}
+
 function renderTabungan(){
   const map=S.dashData?.tabunganMap||{};
   const el=document.getElementById('listTab');
   const entries=Object.entries(map);
-  if(entries.length===0){el.innerHTML='<div class="empty"><div class="empty-icon">🏦</div><div class="empty-text">Belum ada tabungan</div></div>';return;}
+
+  // Update dropdown pilih tabungan
+  const sel=document.getElementById('tabSel');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">Pilih tabungan...</option>';
+    entries.forEach(([n])=>sel.innerHTML+=`<option value="${n}">${n}</option>`);
+    if(cur)sel.value=cur;
+  }
+  // Update rekening di modal baru
+  const rNew=document.getElementById('rTabBaru');
+  if(rNew){
+    rNew.innerHTML='<option value="">Tidak ada setoran awal</option>';
+    S.rekening.forEach(r=>rNew.innerHTML+=`<option value="${r.id}">${r.ikon||'🏦'} ${r.nama}</option>`);
+  }
+
+  if(entries.length===0){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🏦</div><div class="empty-text">Belum ada tabungan · klik "+ Tabungan Baru"</div></div>';
+    return;
+  }
   el.innerHTML=entries.map(([n,t])=>{
-    const pct=t.target>0?Math.min(Math.round((t.kumulatif/t.target)*100),100):100;
+    const pct=t.target>0?Math.min(Math.round((t.kumulatif/t.target)*100),100):0;
+    const sisa=Math.max((t.target||0)-t.kumulatif,0);
+    const pctColor=pct>=100?'var(--green)':pct>=50?'var(--yellow)':'var(--accent)';
     return `<div class="renc-item">
-      <div class="renc-hdr"><div class="renc-nama">🏦 ${n}</div><div class="renc-pct" style="color:var(--green)">${pct}%</div></div>
+      <div class="renc-hdr">
+        <div class="renc-nama">🏦 ${n}</div>
+        <div class="renc-pct" style="color:${pctColor}">${pct}%</div>
+      </div>
       <div class="prog-bar"><div class="prog-fill g" style="width:${pct}%"></div></div>
-      <div style="font-size:10px;color:var(--text2);margin-top:5px">
-        Terkumpul: <strong style="color:var(--green)">${fRp(t.kumulatif)}</strong>
-        ${t.target>0?' / Target: '+fRp(t.target):''}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--text2);margin-top:6px">
+        <span>Terkumpul: <strong style="color:var(--green)">${fRp(t.kumulatif)}</strong></span>
+        ${t.target>0?`<span>Target: <strong style="color:var(--text)">${fRp(t.target)}</strong></span>`:''}
+        ${t.target>0&&sisa>0?`<span>Sisa: <strong style="color:var(--pink)">${fRp(sisa)}</strong></span>`:''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="iact" onclick="openEditTabungan('${n.replace(/'/g,"\'")}',${t.target||0},'')">✏️ Edit Target</button>
+        <button class="iact del" onclick="hapusTabunganItem('${n.replace(/'/g,"\'")}')">🗑️ Hapus</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function hapusTabunganItem(nama){
+  document.getElementById('hapusMsg').textContent=`Hapus semua data tabungan "${nama}"?`;
+  S.hapusCb=async()=>{
+    try{
+      await api({action:'hapusTabunganByNama',namaTabungan:nama});
+      toast('Tabungan dihapus','ok');
+      await fetchDashboard(); renderTabungan();
+    }catch(err){toast(err.message,'err');}
+  };
+  openModal('mHapus');
 }
 
 // ══ RIWAYAT ══════════════════════════════════════════════
@@ -1232,21 +1398,80 @@ async function konfirmHapus(){
 }
 
 // ══ DASHBOARD ═════════════════════════════════════════════
+function initFilterTahun(){
+  const sel=document.getElementById('filterTahun'); if(!sel)return;
+  const now=new Date();
+  const curY=now.getFullYear();
+  // Ambil tahun dari data jika ada
+  const harian=(S.dashData&&S.dashData.harianAll)||[];
+  const years=new Set([curY,curY-1,curY-2]);
+  harian.forEach(t=>{ const y=new Date(t['Tanggal']).getFullYear(); if(y>2000)years.add(y); });
+  const sorted=[...years].sort((a,b)=>b-a);
+  sel.innerHTML=sorted.map(y=>`<option value="${y}"${y===curY?' selected':''}>${y}</option>`).join('');
+  // Set bulan default = sekarang
+  document.getElementById('filterBulan').value=now.getMonth();
+}
+
+function getFilter(){
+  const bEl=document.getElementById('filterBulan');
+  const tEl=document.getElementById('filterTahun');
+  return {
+    bln: bEl?parseInt(bEl.value):new Date().getMonth(),
+    thn: tEl?parseInt(tEl.value):new Date().getFullYear()
+  };
+}
+
+function filterHarian(harian, bln, thn){
+  return (harian||[]).filter(t=>{
+    const d=new Date(t['Tanggal']);
+    return d.getMonth()===bln && d.getFullYear()===thn;
+  });
+}
+
+const NAMA_BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
 function renderDashboard(){
   const d=S.dashData; if(!d){if(S.url)fetchDashboard();return;}
+  initFilterTahun();
+  const {bln,thn}=getFilter();
+  const labelBulan=NAMA_BULAN[bln]+' '+thn;
+
+  // Update label dinamis
+  const lblK=document.getElementById('lblKeluar');
+  const lblM=document.getElementById('lblMasuk');
+  if(lblK) lblK.textContent='Keluar '+labelBulan;
+  if(lblM) lblM.textContent='Masuk '+labelBulan;
+
+  // Hitung dari raw data yang sudah ada (harianAll di-cache)
+  const harian=filterHarian(d.harianAll||[], bln, thn);
+
+  let keluar=0, masuk=0;
+  const katMap={};
+  harian.forEach(t=>{
+    const j=parseFloat(t['Jumlah'])||0;
+    if(t['Tipe']==='Pengeluaran'){
+      keluar+=j;
+      const k=t['Kategori']||'Lainnya';
+      katMap[k]=(katMap[k]||0)+j;
+    } else { masuk+=j; }
+  });
+
+  // Total saldo & aset (tidak difilter — akumulatif)
   const totalAset=(d.asetList||[]).reduce((s,a)=>s+(a.berat*(a.hargaNow||a.hargaBeli)),0);
   document.getElementById('dTotalSaldo').textContent=fRp(d.totalSaldo||0);
   document.getElementById('dTotalAset').textContent=fRp(totalAset);
-  document.getElementById('dKeluar').textContent=fRp(d.pengeluaranBulanIni||0);
-  document.getElementById('dMasuk').textContent=fRp(d.pemasukanBulanIni||0);
-  // Kategori
-  const kat=d.pengeluaranPerKategori||{};
-  const maxK=Math.max(...Object.values(kat),1);
+  document.getElementById('dKeluar').textContent=fRp(keluar);
+  document.getElementById('dMasuk').textContent=fRp(masuk);
+
+  // Kategori — berdasarkan filter
   const katEl=document.getElementById('dKategori');
-  const katE=Object.entries(kat).sort((a,b)=>b[1]-a[1]);
-  katEl.innerHTML=katE.length===0?'<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Belum ada pengeluaran bulan ini</div></div>':
-    katE.map(([k,v])=>`<div class="kat-row"><span class="kat-name">${k}</span><div class="kat-bar-wrap"><div class="kat-bar-fill" style="width:${v/maxK*100}%"></div></div><span class="kat-val">${fRp(v)}</span></div>`).join('');
-  // Rekening
+  const katE=Object.entries(katMap).sort((a,b)=>b[1]-a[1]);
+  const maxK=Math.max(...katE.map(e=>e[1]),1);
+  katEl.innerHTML=katE.length===0
+    ?`<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Tidak ada pengeluaran di ${labelBulan}</div></div>`
+    :katE.map(([k,v])=>`<div class="kat-row"><span class="kat-name">${k}</span><div class="kat-bar-wrap"><div class="kat-bar-fill" style="width:${v/maxK*100}%"></div></div><span class="kat-val">${fRp(v)}</span></div>`).join('');
+
+  // Rekening — akumulatif, tidak difilter
   document.getElementById('dRekening').innerHTML=(d.saldoPerRekening||[]).map(r=>
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-size:12px;font-weight:700">${r.ikon||'🏦'} ${r.nama}</div><div style="font-size:10px;color:var(--text3)">${r.tipe}</div></div>
@@ -1255,10 +1480,12 @@ function renderDashboard(){
         <div style="font-size:10px;color:var(--text3)">Awal: ${fRp(r.saldoAwal)}</div>
       </div>
     </div>`).join('');
+
   // Cicilan
   const cicilans=d.cicilanList||[];
-  document.getElementById('dCicilan').innerHTML=cicilans.length===0?'<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Tidak ada cicilan aktif</div></div>':
-    cicilans.map(c=>{
+  document.getElementById('dCicilan').innerHTML=cicilans.length===0
+    ?'<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Tidak ada cicilan aktif</div></div>'
+    :cicilans.map(c=>{
       const pct=c.pokok>0?Math.min(Math.round((c.totalDibayar/c.pokok)*100),100):0;
       return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:700">${c.nama}</span><span style="font-size:11px;font-weight:800;color:var(--accent)">${pct}%</span></div>
@@ -1266,10 +1493,12 @@ function renderDashboard(){
         <div style="font-size:10px;color:var(--text2);margin-top:4px">Sisa: ${fRp(Math.max(c.pokok-c.totalDibayar,0))}</div>
       </div>`;
     }).join('');
+
   // Rencana
   const renc=d.rencanaProgress||[];
-  document.getElementById('dRencana').innerHTML=renc.length===0?'<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Belum ada rencana</div></div>':
-    renc.map(r=>{const pct=Math.min(r.persentase,100);return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+  document.getElementById('dRencana').innerHTML=renc.length===0
+    ?'<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Belum ada rencana</div></div>'
+    :renc.map(r=>{const pct=Math.min(r.persentase,100);return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:700">${r.nama}</span><span style="font-size:11px;font-weight:800;color:var(--accent)">${pct}%</span></div>
       <div class="prog-bar"><div class="prog-fill a" style="width:${pct}%"></div></div>
     </div>`;}).join('');
