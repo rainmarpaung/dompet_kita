@@ -194,8 +194,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Plus Jak
 .empty-text{font-size:13px}
 
 /* ── TOAST ── */
-#toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px);left:50%;transform:translateX(-50%) translateY(80px);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:11px 20px;border-radius:99px;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:.3s;z-index:200;white-space:nowrap;pointer-events:none}
-#toast.show{transform:translateX(-50%) translateY(0)}
+#toast{position:fixed;bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px);left:50%;transform:translateX(-50%);opacity:0;visibility:hidden;background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:11px 20px;border-radius:99px;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .25s,visibility .25s;z-index:999;white-space:nowrap;pointer-events:none}
+#toast.show{opacity:1;visibility:visible}
 #toast.ok{border-color:var(--green);color:var(--green)}
 #toast.err{border-color:var(--pink);color:var(--pink)}
 
@@ -762,13 +762,13 @@ function closeOnBg(e, id) { if (e.target === document.getElementById(id)) closeM
 // ══════════════════════════════════════════════════════════
 function toast(msg, type='ok') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = '';
-  // Force reflow agar animasi restart
-  void el.offsetWidth;
-  el.className = 'show ' + type;
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.className = ''; }, 2800);
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  el._t = setTimeout(() => {
+    el.className = type; // hapus 'show', fade out via opacity
+    el._t2 = setTimeout(() => { el.className = ''; }, 280);
+  }, 2800);
 }
 
 // ══════════════════════════════════════════════════════════
