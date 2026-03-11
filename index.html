@@ -761,10 +761,12 @@ function setLoad(id, on, txt='') {
 // ══════════════════════════════════════════════════════════
 async function api(payload) {
   if (!S.url) throw new Error('URL belum diatur. Buka Pengaturan.');
+  // PENTING: jangan set Content-Type header — akan trigger CORS preflight
+  // Google Apps Script tidak support preflight OPTIONS request
   const res = await fetch(S.url, {
     method: 'POST',
     body: JSON.stringify(payload),
-    headers: {'Content-Type':'application/json'}
+    redirect: 'follow',
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
