@@ -295,7 +295,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Plus Jak
       <div class="fg"><label>Rekening</label><select class="fs" id="hRek"><option value="">Pilih...</option></select></div>
     </div>
     <div class="frow">
-      <div class="fg"><label>Kategori</label><select class="fs" id="hKat"><option>Makanan</option><option>Transport</option><option>Belanja</option><option>Tagihan</option><option>Hiburan</option><option>Kesehatan</option><option>Pendidikan</option><option>Tabungan</option><option>Cicilan</option><option>Rencana</option><option>Lainnya</option></select></div>
+      <div class="fg"><label>Kategori</label><select class="fs" id="hKat"><option value="">Pilih kategori...</option></select></div>
       <div class="fg"><label>Jumlah (Rp)</label><div class="rp-wrap"><input type="text" inputmode="numeric" class="fi rp" id="hJml" placeholder="50.000"></div></div>
     </div>
     <div class="fg"><label>Deskripsi</label><input type="text" class="fi" id="hDesk" placeholder="Makan siang..."></div>
@@ -498,6 +498,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Plus Jak
   </div>
 </div>
 
+<!-- ── KATEGORI ── -->
+<div class="section" id="sec-kategori">
+  <div class="page-title">🏷️ Kategori</div>
+  <div class="page-sub">Kelola kategori pengeluaran</div>
+  <div class="card">
+    <div class="card-title">+ Tambah Kategori</div>
+    <div class="frow">
+      <div class="fg"><label>Nama Kategori</label><input type="text" class="fi" id="katNama" placeholder="Investasi, Olahraga..."></div>
+      <div class="fg"><label>Ikon (emoji)</label><input type="text" class="fi" id="katIkon" placeholder="💼" maxlength="2"></div>
+    </div>
+    <button class="btn btn-primary" id="btnKat" onclick="simpanKategori()">🏷️ Tambah Kategori</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Daftar Kategori</div>
+    <div id="listKat"><div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Memuat...</div></div></div>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <!-- ══ BOTTOM NAV ══ -->
@@ -522,6 +540,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Plus Jak
       <button class="lainnya-item" onclick="navFromLainnya('riwayat')"><span class="lainnya-icon">📋</span><span class="lainnya-lbl">Riwayat</span></button>
       <button class="lainnya-item" onclick="navFromLainnya('rekening')"><span class="lainnya-icon">🏦</span><span class="lainnya-lbl">Rekening</span></button>
       <button class="lainnya-item" onclick="navFromLainnya('settings')"><span class="lainnya-icon">⚙️</span><span class="lainnya-lbl">Pengaturan</span></button>
+      <button class="lainnya-item" onclick="navFromLainnya('kategori')"><span class="lainnya-icon">🏷️</span><span class="lainnya-lbl">Kategori</span></button>
     </div>
   </div>
 </div>
@@ -666,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Init RP inputs
   initRpInputs();
   initFilters();
+  populateKatSelect();
 
   // URL
   if (S.url) {
@@ -716,6 +736,7 @@ function switchNav(name) {
   if (name === 'aset') renderAset();
   if (name === 'rencana') renderRencana();
   if (name === 'rekening') renderRekening();
+  if (name === 'kategori') { syncKategori().then(()=>{ renderKategori(); populateKatSelect(); }); }
 }
 
 function navFromLainnya(name) {
@@ -739,12 +760,15 @@ function closeOnBg(e, id) { if (e.target === document.getElementById(id)) closeM
 // ══════════════════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════════════════
-let toastT;
 function toast(msg, type='ok') {
   const el = document.getElementById('toast');
-  el.textContent = msg; el.className = 'show ' + type;
-  clearTimeout(toastT);
-  toastT = setTimeout(() => el.className = '', 2800);
+  el.textContent = msg;
+  el.className = '';
+  // Force reflow agar animasi restart
+  void el.offsetWidth;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 2800);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -784,6 +808,7 @@ async function fetchAll() {
     S.allData = all;
     S.rekening = dash.saldoPerRekening || [];
     populateRekSelects();
+    populateKatSelect();
     renderRekeningScroll();
     renderDashboard();
     renderTabungan();
@@ -1253,7 +1278,10 @@ async function loadRiwayat() {
   } catch(e) { el.innerHTML = `<div class="empty"><div class="empty-text">Gagal: ${e.message}</div></div>`; }
 }
 function getCatIcon(k) {
-  const m = {'Makanan':'🍜','Transport':'🚗','Belanja':'🛍️','Tagihan':'💡','Hiburan':'🎮','Kesehatan':'💊','Pendidikan':'📚','Tabungan':'🏦','Cicilan':'💳','Rencana':'🎯','Pemasukan':'💰'};
+  const list = getKategoriList();
+  const found = list.find(c => c.nama === k);
+  if (found) return found.ikon||'💸';
+  const m = {'Pemasukan':'💰','Tabungan':'🏦','Cicilan':'💳','Rencana':'🎯'};
   return m[k]||'💸';
 }
 function hapusHarian(id) {
@@ -1586,6 +1614,108 @@ async function uploadFile(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// ══════════════════════════════════════════════════════════
+// KATEGORI
+// ══════════════════════════════════════════════════════════
+const DEFAULT_KATEGORI = [
+  {nama:'Makanan',ikon:'🍜'},{nama:'Transport',ikon:'🚗'},
+  {nama:'Belanja',ikon:'🛍️'},{nama:'Tagihan',ikon:'💡'},
+  {nama:'Hiburan',ikon:'🎮'},{nama:'Kesehatan',ikon:'💊'},
+  {nama:'Pendidikan',ikon:'📚'},{nama:'Tabungan',ikon:'🏦'},
+  {nama:'Cicilan',ikon:'💳'},{nama:'Rencana',ikon:'🎯'},
+  {nama:'Investasi',ikon:'📈'},{nama:'Lainnya',ikon:'💸'},
+];
+
+// Kategori disimpan di localStorage sebagai fallback + sync dari sheet Kategori
+function getKategoriList() {
+  const stored = localStorage.getItem('dp_kategori');
+  if (stored) {
+    try { return JSON.parse(stored); } catch(e) {}
+  }
+  return DEFAULT_KATEGORI;
+}
+
+function saveKategoriLocal(list) {
+  localStorage.setItem('dp_kategori', JSON.stringify(list));
+}
+
+function populateKatSelect() {
+  const list = getKategoriList();
+  const sel = document.getElementById('hKat');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Pilih kategori...</option>' +
+    list.map(k => `<option value="${k.nama}">${k.ikon||''} ${k.nama}</option>`).join('');
+  if (cur) sel.value = cur;
+}
+
+async function simpanKategori() {
+  const nama = document.getElementById('katNama').value.trim();
+  if (!nama) { toast('Isi nama kategori!','err'); return; }
+  const ikon = document.getElementById('katIkon').value.trim() || '🏷️';
+
+  // Simpan ke sheet Kategori via API
+  setLoad('btnKat', true);
+  try {
+    await api({action:'tambahKategori', nama, ikon});
+    toast('✅ Kategori ditambahkan!','ok');
+    document.getElementById('katNama').value = '';
+    document.getElementById('katIkon').value = '';
+    await syncKategori();
+    renderKategori();
+    populateKatSelect();
+  } catch(e) { toast(e.message,'err'); }
+  finally { setLoad('btnKat', false); }
+}
+
+async function syncKategori() {
+  // Ambil dari sheet, update localStorage
+  try {
+    const data = await api({action:'getKategori'});
+    if (data.list && data.list.length > 0) {
+      saveKategoriLocal(data.list);
+    }
+  } catch(e) { /* pakai local */ }
+}
+
+async function hapusKategori(nama) {
+  const list = getKategoriList();
+  const isDefault = DEFAULT_KATEGORI.some(k => k.nama === nama);
+  if (isDefault) { toast('Kategori default tidak bisa dihapus','err'); return; }
+  document.getElementById('hapusMsg').textContent = `Hapus kategori "${nama}"?`;
+  S.hapusCb = async () => {
+    try {
+      await api({action:'hapusKategori', nama});
+      const newList = list.filter(k => k.nama !== nama);
+      saveKategoriLocal(newList);
+      toast('Kategori dihapus','ok');
+      renderKategori();
+      populateKatSelect();
+    } catch(e) { toast(e.message,'err'); }
+  };
+  openModal('mHapus');
+}
+
+function renderKategori() {
+  const list = getKategoriList();
+  const el = document.getElementById('listKat');
+  if (!el) return;
+  el.innerHTML = list.map(k => {
+    const isDefault = DEFAULT_KATEGORI.some(d => d.nama === k.nama);
+    return `<div class="list-item">
+      <div class="li-icon" style="font-size:22px">${k.ikon||'🏷️'}</div>
+      <div class="li-body">
+        <div class="li-title">${k.nama}</div>
+        <div class="li-sub">${isDefault?'Kategori default':''}</div>
+      </div>
+      <div class="li-right">
+        ${!isDefault?`<button class="action-btn del" onclick="hapusKategori('${k.nama.replace(/'/g,"\'")}')">🗑️</button>`:'<span style="font-size:10px;color:var(--text3)">default</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 </script>
 </body>
 </html>
